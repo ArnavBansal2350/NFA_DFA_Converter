@@ -41,7 +41,7 @@ This application helps students understand the equivalence between nondeterminis
 ## 📁 Project Structure
 
 ```
-NFA_DFA_Converter/
+NFA_to_DFA/
 │
 ├── main.py              ← NFA to DFA logic + graph generation
 ├── app.py               ← Flask routes
