@@ -60,7 +60,7 @@ NFA_to_DFA/
 **Step 1 — Clone the repository:**
 ```bash
 git clone https://github.com/ArnavBansal2350/NFA_DFA_Converter.git
-cd NFA_DFA_Converter
+cd NFA_to_DFA
 ```
 
 **Step 2 — Install dependencies:**
