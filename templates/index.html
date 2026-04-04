@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NFA → DFA Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo-area">
+      <span class="logo-badge">TAFL</span>
+      <div>
+        <h1 class="site-title">NFA → DFA <span class="accent">Converter</span></h1>
+        <p class="site-sub">Theory of Automata & Formal Languages</p>
+      </div>
+    </div>
+    <div class="step-indicators">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot3">3</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot4">4</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ======================== PHASE 1: INPUT FORM ======================== -->
+<section class="phase active" id="phase1">
+  <div class="phase-label"><span>STEP 01</span> Define Your NFA</div>
+  <div class="card">
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Number of States</label>
+        <input type="number" id="num_states" min="1" max="10" placeholder="e.g. 3" autocomplete="off"/>
+        <span class="hint">States will be named q0, q1, q2...</span>
+      </div>
+
+      <div class="form-group">
+        <label>Input Symbols</label>
+        <input type="text" id="symbols_input" placeholder="e.g. 0 1  or  a b" autocomplete="off"/>
+        <span class="hint">Space separated symbols</span>
+      </div>
+
+      <div class="form-group">
+        <label>Start State</label>
+        <input type="text" id="start_state" placeholder="e.g. q0" autocomplete="off"/>
+        <span class="hint">Must be one of the states</span>
+      </div>
+
+      <div class="form-group">
+        <label>Final States</label>
+        <input type="text" id="final_states" placeholder="e.g. q2  or  q1 q2" autocomplete="off"/>
+        <span class="hint">Space separated final states</span>
+      </div>
+
+    </div>
+    <div id="form-error" class="error-msg" style="display:none;"></div>
+    <button class="btn-primary" onclick="generateNFATable()">
+      Generate NFA Table <span class="btn-arrow">→</span>
+    </button>
+  </div>
+</section>
+
+<!-- ======================== PHASE 2: NFA TABLE ======================== -->
+<section class="phase" id="phase2">
+  <div class="phase-label"><span>STEP 02</span> Fill NFA Transitions</div>
+  <div class="card">
+    <div class="legend-row">
+      <span class="legend-item"><span class="badge start-badge">→</span> Start State</span>
+      <span class="legend-item"><span class="badge final-badge">★</span> Final State</span>
+    </div>
+    <p class="table-hint">
+      Fill each cell with transition states (comma separated, e.g. <code>q0,q1</code>). Use <code>-</code> for no transition.
+    </p>
+    <div class="table-wrapper" id="nfa_table_wrapper"></div>
+    <div id="nfa-error" class="error-msg" style="display:none;"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goBack(1)">← Back</button>
+      <button class="btn-primary" onclick="convertNFA()">
+        Convert to DFA <span class="btn-arrow">→</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PHASE 3: DFA TABLE ======================== -->
+<section class="phase" id="phase3">
+  <div class="phase-label"><span>STEP 03</span> DFA Transition Table</div>
+  <div class="card">
+    <div class="legend-row">
+      <span class="legend-item"><span class="badge start-badge">→</span> Start State</span>
+      <span class="legend-item"><span class="badge final-badge">★</span> Final State</span>
+      <span class="legend-item"><span class="badge dead-badge">d</span> Dead State</span>
+    </div>
+    <div class="table-wrapper" id="dfa_table_wrapper"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goBack(2)">← Back</button>
+      <button class="btn-primary" onclick="showGraphs()"> Visualize Graphs <span class="btn-arrow">→</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PHASE 4: GRAPHS ======================== -->
+<section class="phase" id="phase4">
+  <div class="phase-label"><span>STEP 04</span> NFA & DFA Visualization</div>
+
+  <div class="graphs-container">
+
+    <div class="graph-card nfa-card">
+      <div class="graph-header">
+        <span class="graph-tag nfa-tag">NFA</span>
+        <h3>Nondeterministic Finite Automaton</h3>
+      </div>
+      <div class="graph-body" id="nfa_graph">
+        <button class="zoom-btn" onclick="openModal('nfa_graph')">🔍</button>
+      </div>
+    </div>
+
+    <div class="conversion-arrow">
+      <div class="arrow-head">⟹</div>
+    </div>
+
+    <div class="graph-card dfa-card">
+      <div class="graph-header">
+        <span class="graph-tag dfa-tag">DFA</span>
+        <h3>Deterministic Finite Automaton</h3>
+      </div>
+      <div class="graph-body" id="dfa_graph">
+        <button class="zoom-btn" onclick="openModal('dfa_graph')">🔍</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="btn-row center-btn">
+    <button class="btn-secondary" onclick="goBack(3)">← Back</button>
+    <button class="btn-primary" onclick="resetAll()">
+      Start Over ↺
+    </button>
+  </div>
+</section>
+<!-- MODAL -->
+<div id="graph-modal" class="modal-overlay" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-toolbar">
+      <button class="modal-btn" onclick="zoomIn()">＋</button>
+      <button class="modal-btn" onclick="zoomOut()">－</button>
+      <button class="modal-btn" onclick="resetZoom()">⟳</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <p>NFA → DFA Visualizer &nbsp;|&nbsp; Theory of Automata & Formal Languages</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.panzoom.js/1.18.2/svg.panzoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=2"></script>
+</body>
+</html>
