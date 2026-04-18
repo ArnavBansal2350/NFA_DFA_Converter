@@ -44,6 +44,15 @@ def state_name(state):
     return "{" + ",".join(sorted(state)) + "}"
 
 
+def quadratic_midpoint(x1, y1, cx, cy, x2, y2):
+    """Return the midpoint of a quadratic Bezier curve."""
+    t = 0.5
+    mt = 1 - t
+    px = (mt * mt * x1) + (2 * mt * t * cx) + (t * t * x2)
+    py = (mt * mt * y1) + (2 * mt * t * cy) + (t * t * y2)
+    return px, py
+
+
 def get_dfa_table(dfa_states, dfa_transitions, dfa_final_states, symbols, start_state):
     rows = []
     start_fs = frozenset([start_state])
@@ -65,163 +74,261 @@ def get_dfa_table(dfa_states, dfa_transitions, dfa_final_states, symbols, start_
 # PURE SVG GRAPH GENERATION
 # ------------------------------
 
-def generate_svg_graph(node_names, edges, start_name, final_names, dead_names=[]):
+def generate_svg_graph(node_names, edges, start_name, final_names, dead_names=None):
     """
-    Generate a pure SVG graph without Graphviz.
-    Nodes are laid out in a horizontal line.
+    Final polished SVG graph generator
+    - Better spacing
+    - Curved long transitions
+    - Dead state lower
+    - Cleaner labels
+    - Better readability for deployment
     """
+    if dead_names is None:
+        dead_names = []
+
     n = len(node_names)
     if n == 0:
         return '<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><text x="100" y="50" text-anchor="middle" fill="#914F1E">No states</text></svg>'
 
-    # Layout
-    R = 35  # node radius
-    H_GAP = 150  # horizontal gap between centers
+    # -------------------------
+    # Layout Settings
+    # -------------------------
+    R = 38
+    H_GAP = 190
+    V_GAP = 130
     MARGIN_LEFT = 100
-    MARGIN_TOP = 100
-    cols_per_row = max(4, n)
+    MARGIN_TOP = 110
+
+    cols_per_row = min(4, n)
     rows = math.ceil(n / cols_per_row)
 
-    # Assign positions
+    # -------------------------
+    # Position Nodes
+    # -------------------------
     positions = {}
+
     for i, name in enumerate(node_names):
         col = i % cols_per_row
         row = i // cols_per_row
+
         x = MARGIN_LEFT + col * H_GAP
-        y = MARGIN_TOP + row * 120
+        y = MARGIN_TOP + row * V_GAP
+
         positions[name] = (x, y)
 
-    width = MARGIN_LEFT + (min(n, cols_per_row)) * H_GAP + 40
-    height = MARGIN_TOP + rows * 120 + 40
+    # Push dead states downward
+    for d in dead_names:
+        if d in positions:
+            x, y = positions[d]
+            positions[d] = (x, y + 100)
+
+    node_order = {name: idx for idx, name in enumerate(node_names)}
+
+    width = max(900, MARGIN_LEFT + cols_per_row * H_GAP + 100)
+    height = max(520, MARGIN_TOP + rows * V_GAP + 180)
 
     svg = f'<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">\n'
 
-    # Defs
-    svg += '''<defs>
-  <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-    <polygon points="0 0, 8 3, 0 6" fill="#914F1E"/>
-  </marker>
-  <marker id="arr-self" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-    <polygon points="0 0, 8 3, 0 6" fill="#914F1E"/>
-  </marker>
-</defs>\n'''
+    # -------------------------
+    # Arrow defs
+    # -------------------------
+    svg += '''
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#914F1E"/>
+      </marker>
+    </defs>
+    '''
 
-    # Group edges by (src, dst)
+    # -------------------------
+    # Group edges
+    # -------------------------
     edge_map = {}
     for src, dst, label in edges:
-        key = (src, dst)
-        if key not in edge_map:
-            edge_map[key] = []
-        edge_map[key].append(label)
+        edge_map.setdefault((src, dst), []).append(label)
 
-    # Draw edges
+    # -------------------------
+    # Draw Edges
+    # -------------------------
     drawn = set()
+
     for (src, dst), labels in edge_map.items():
-        label = ",".join(labels)
+
         if src not in positions or dst not in positions:
             continue
+
+        if (src, dst) in drawn:
+            continue
+
+        label = ",".join(labels)
 
         x1, y1 = positions[src]
         x2, y2 = positions[dst]
 
+        # Self loop
         if src == dst:
-            # Self loop
-            cx = x1
-            cy = y1 - R
-            svg += f'<path d="M {x1-15} {y1-R} C {x1-40} {y1-80} {x1+40} {y1-80} {x1+15} {y1-R}" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr)"/>\n'
-            svg += f'<text x="{cx}" y="{y1-75}" text-anchor="middle" font-family="Courier New" font-size="11" fill="#914F1E">{label}</text>\n'
-        else:
-            # Check if reverse edge exists
-            rev = (dst, src)
-            is_bidirectional = rev in edge_map
+            svg += f'''
+            <path d="M {x1-15} {y1-R}
+                     C {x1-45} {y1-85},
+                       {x1+45} {y1-85},
+                       {x1+15} {y1-R}"
+                  fill="none"
+                  stroke="#914F1E"
+                  stroke-width="1.6"
+                  marker-end="url(#arr)"/>
+            '''
+            svg += f'<text x="{x1}" y="{y1-78}" text-anchor="middle" font-size="10" fill="#914F1E">{label}</text>'
+            continue
 
-            if is_bidirectional and src > dst:
-                continue  # already drawn
+        rev = (dst, src)
+        is_bidirectional = rev in edge_map
 
-            dx = x2 - x1
-            dy = y2 - y1
-            dist = math.sqrt(dx*dx + dy*dy)
-            if dist == 0:
-                continue
+        dx = x2 - x1
+        dy = y2 - y1
+        dist = math.sqrt(dx*dx + dy*dy)
+        if dist == 0:
+            continue
 
-            # Unit vector
-            ux = dx / dist
-            uy = dy / dist
+        ux = dx / dist
+        uy = dy / dist
 
-            # Start and end points on circle edges
-            sx = x1 + ux * R
-            sy = y1 + uy * R
-            ex = x2 - ux * R
-            ey = y2 - uy * R
+        sx = x1 + ux * R
+        sy = y1 + uy * R
+        ex = x2 - ux * R
+        ey = y2 - uy * R
 
-            if is_bidirectional:
-                # Curved arrow
-                perp_x = -uy * 30
-                perp_y = ux * 30
-                mx = (sx + ex) / 2 + perp_x
-                my = (sy + ey) / 2 + perp_y
-                svg += f'<path d="M {sx:.1f} {sy:.1f} Q {mx:.1f} {my:.1f} {ex:.1f} {ey:.1f}" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr)"/>\n'
-                lx = mx
-                ly = my - 10
-                svg += f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle" font-family="Courier New" font-size="11" fill="#914F1E">{label}</text>\n'
+        src_idx = node_order[src]
+        dst_idx = node_order[dst]
+        gap = abs(dst_idx - src_idx)
 
-                # Reverse edge
-                rev_labels = ",".join(edge_map[rev])
-                perp_x2 = -perp_x
-                perp_y2 = -perp_y
-                mx2 = (ex + sx) / 2 + perp_x2
-                my2 = (ey + sy) / 2 + perp_y2
-                svg += f'<path d="M {ex:.1f} {ey:.1f} Q {mx2:.1f} {my2:.1f} {sx:.1f} {sy:.1f}" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr)"/>\n'
-                lx2 = mx2
-                ly2 = my2 + 18
-                svg += f'<text x="{lx2:.1f}" y="{ly2:.1f}" text-anchor="middle" font-family="Courier New" font-size="11" fill="#914F1E">{rev_labels}</text>\n'
+        use_curve = is_bidirectional or gap > 1
+
+        # ---------------------
+        # Curved Edge
+        # ---------------------
+        if use_curve:
+
+            perp_x = -uy
+            perp_y = ux
+
+            curve_size = 55 + max(gap - 1, 0) * 40
+
+            direction = -1 if dst_idx > src_idx else 1
+
+            cx = (sx + ex)/2 + perp_x * curve_size * direction
+            cy = (sy + ey)/2 + perp_y * curve_size * direction
+
+            svg += f'''
+            <path d="M {sx:.1f} {sy:.1f}
+                     Q {cx:.1f} {cy:.1f}
+                       {ex:.1f} {ey:.1f}"
+                  fill="none"
+                  stroke="#914F1E"
+                  stroke-width="1.6"
+                  marker-end="url(#arr)"/>
+            '''
+
+            lx, ly = quadratic_midpoint(sx, sy, cx, cy, ex, ey)
+
+            svg += f'<text x="{lx:.1f}" y="{ly-8:.1f}" text-anchor="middle" font-size="9" fill="#914F1E">{label}</text>'
+
+            drawn.add((src, dst))
+
+            # reverse side
+            if is_bidirectional and rev not in drawn:
+
+                rev_label = ",".join(edge_map[rev])
+
+                cx2 = (sx + ex)/2 - perp_x * curve_size * direction
+                cy2 = (sy + ey)/2 - perp_y * curve_size * direction
+
+                svg += f'''
+                <path d="M {ex:.1f} {ey:.1f}
+                         Q {cx2:.1f} {cy2:.1f}
+                           {sx:.1f} {sy:.1f}"
+                      fill="none"
+                      stroke="#914F1E"
+                      stroke-width="1.6"
+                      marker-end="url(#arr)"/>
+                '''
+
+                lx2, ly2 = quadratic_midpoint(ex, ey, cx2, cy2, sx, sy)
+
+                svg += f'<text x="{lx2:.1f}" y="{ly2+14:.1f}" text-anchor="middle" font-size="9" fill="#914F1E">{rev_label}</text>'
+
                 drawn.add(rev)
-            else:
-                svg += f'<line x1="{sx:.1f}" y1="{sy:.1f}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr)"/>\n'
-                lx = (sx + ex) / 2 - uy * 14
-                ly = (sy + ey) / 2 + ux * 14
-                svg += f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle" font-family="Courier New" font-size="11" fill="#914F1E">{label}</text>\n'
 
-    # Draw start arrow
+        # ---------------------
+        # Straight Edge
+        # ---------------------
+        else:
+            svg += f'''
+            <line x1="{sx:.1f}" y1="{sy:.1f}"
+                  x2="{ex:.1f}" y2="{ey:.1f}"
+                  stroke="#914F1E"
+                  stroke-width="1.6"
+                  marker-end="url(#arr)"/>
+            '''
+
+            lx = (sx + ex)/2
+            ly = (sy + ey)/2 - 10
+
+            svg += f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle" font-size="9" fill="#914F1E">{label}</text>'
+
+    # -------------------------
+    # Start Arrow
+    # -------------------------
     if start_name in positions:
         sx, sy = positions[start_name]
-        svg += f'<line x1="{sx-R-25}" y1="{sy}" x2="{sx-R-2}" y2="{sy}" stroke="#914F1E" stroke-width="2" marker-end="url(#arr)"/>\n'
+        svg += f'''
+        <line x1="{sx-R-28}" y1="{sy}"
+              x2="{sx-R-3}" y2="{sy}"
+              stroke="#914F1E"
+              stroke-width="2"
+              marker-end="url(#arr)"/>
+        '''
 
-    # Draw nodes
+    # -------------------------
+    # Draw Nodes
+    # -------------------------
     for name in node_names:
+
         x, y = positions[name]
+
+        is_start = name == start_name
         is_final = name in final_names
         is_dead = name in dead_names
-        is_start = name == start_name
 
         if is_dead:
-            fill = '#f5c6c6'
-            stroke = '#c0392b'
+            fill = "#f5c6c6"
+            stroke = "#c0392b"
         elif is_final:
-            fill = '#DEAC80'
-            stroke = '#914F1E'
+            fill = "#DEAC80"
+            stroke = "#914F1E"
         elif is_start:
-            fill = '#F7DCB9'
-            stroke = '#C07830'
+            fill = "#F7DCB9"
+            stroke = "#C07830"
         else:
-            fill = '#ffffff'
-            stroke = '#914F1E'
+            fill = "#ffffff"
+            stroke = "#914F1E"
 
-        svg += f'<circle cx="{x}" cy="{y}" r="{R}" fill="{fill}" stroke="{stroke}" stroke-width="2"/>\n'
+        svg += f'<circle cx="{x}" cy="{y}" r="{R}" fill="{fill}" stroke="{stroke}" stroke-width="2"/>'
 
         if is_final:
-            svg += f'<circle cx="{x}" cy="{y}" r="{R-7}" fill="none" stroke="{stroke}" stroke-width="1.5"/>\n'
+            svg += f'<circle cx="{x}" cy="{y}" r="{R-7}" fill="none" stroke="{stroke}" stroke-width="1.4"/>'
 
-        # Wrap long text
+        # wrapped names
         if len(name) > 6:
-            parts = name.strip('{}').split(',')
-            mid = len(parts) // 2
-            line1 = '{' + ','.join(parts[:mid]) + ','
-            line2 = ','.join(parts[mid:]) + '}'
-            svg += f'<text x="{x}" y="{y-4}" text-anchor="middle" font-family="Courier New" font-size="10" fill="#2C1A0E">{line1}</text>\n'
-            svg += f'<text x="{x}" y="{y+10}" text-anchor="middle" font-family="Courier New" font-size="10" fill="#2C1A0E">{line2}</text>\n'
+            parts = name.strip("{}").split(",")
+            mid = math.ceil(len(parts)/2)
+
+            line1 = "{" + ",".join(parts[:mid])
+            line2 = ",".join(parts[mid:]) + "}"
+
+            svg += f'<text x="{x}" y="{y-4}" text-anchor="middle" font-size="9" fill="#2C1A0E">{line1}</text>'
+            svg += f'<text x="{x}" y="{y+10}" text-anchor="middle" font-size="9" fill="#2C1A0E">{line2}</text>'
         else:
-            svg += f'<text x="{x}" y="{y+5}" text-anchor="middle" font-family="Courier New" font-size="13" fill="#2C1A0E">{name}</text>\n'
+            svg += f'<text x="{x}" y="{y+4}" text-anchor="middle" font-size="11" fill="#2C1A0E">{name}</text>'
 
     svg += '</svg>'
     return svg
