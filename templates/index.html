@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NFA → DFA Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo-area">
+      <span class="logo-badge">TAFL</span>
+      <div>
+        <h1 class="site-title">NFA → DFA <span class="accent">Converter</span></h1>
+        <p class="site-sub">Theory of Automata & Formal Languages</p>
+      </div>
+    </div>
+    <div class="step-indicators">
+      <div class="step-dot active" id="dot0">1</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot1">2</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot2">3</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot25">4</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot3">5</div>
+      <div class="step-line"></div>
+      <div class="step-dot" id="dot4">6</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ======================== PHASE 0: INTRODUCTION ======================== -->
+<section class="phase active" id="phase0">
+  <div class="phase-label"><span>INTRO</span> Understanding Finite Automata</div>
+
+  <div class="intro-grid">
+
+    <!-- NFA Card -->
+    <div class="intro-card">
+      <div class="intro-card-header nfa-header">
+        <span class="graph-tag nfa-tag">NFA</span>
+        <h3>Nondeterministic Finite Automaton</h3>
+      </div>
+      <div class="intro-card-body">
+        <p>An NFA is a theoretical model of computation where for a given state and input symbol, the machine can transition to <strong>multiple states simultaneously</strong> or even no state at all.</p>
+        <ul class="intro-points">
+          <li>Can have multiple transitions for same input</</li>
+          <li>Can have empty (ε) transitions</li>
+          <li>Accepts if <strong>any</strong> path leads to final state</li>
+          <li>Easier to design for complex languages</li>
+        </ul>
+        <!-- NFA Example Diagram -->
+        <div class="intro-diagram">
+          <p class="diagram-label">Example: NFA for (a+b)*a</p>
+          <svg viewBox="0 10 300 150" xmlns="http://www.w3.org/2000/svg" class="example-svg" style="display:block; margin:0 auto;">
+            <defs>
+              <marker id="arr1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#914F1E"/>
+              </marker>
+            </defs>
+            <!-- Entry arrow -->
+            <line x1="10" y1="80" x2="55" y2="80" stroke="#914F1E" stroke-width="2" marker-end="url(#arr1)"/>
+            <!-- q0 -->
+            <circle cx="85" cy="80" r="30" fill="#F7DCB9" stroke="#914F1E" stroke-width="2"/>
+            <text x="85" y="85" text-anchor="middle" font-family="Courier New" font-size="14" fill="#2C1A0E">q0</text>
+            <!-- q0 self loop a,b -->
+            <path d="M 70 53 Q 85 15 100 53" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr1)"/>
+            <text x="85" y="28" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">a,b</text>
+            <!-- q0 to q1 on a -->
+            <line x1="115" y1="80" x2="195" y2="80" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr1)"/>
+            <text x="155" y="72" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">a</text>
+            <!-- q1 double circle final -->
+            <circle cx="225" cy="80" r="30" fill="#DEAC80" stroke="#914F1E" stroke-width="2"/>
+            <circle cx="225" cy="80" r="23" fill="none" stroke="#914F1E" stroke-width="1.5"/>
+            <text x="225" y="85" text-anchor="middle" font-family="Courier New" font-size="14" fill="#2C1A0E">q1</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- DFA Card -->
+    <div class="intro-card">
+      <div class="intro-card-header dfa-header">
+        <span class="graph-tag dfa-tag">DFA</span>
+        <h3>Deterministic Finite Automaton</h3>
+      </div>
+      <div class="intro-card-body">
+        <p>A DFA is a finite automaton where for each state and input symbol, there is <strong>exactly one transition</strong> to a next state — no ambiguity, no choices.</p>
+        <ul class="intro-points">
+          <li>Exactly one transition per state per symbol</li>
+          <li>No empty (ε) transitions allowed</li>
+          <li>Accepts if machine ends in a final state</li>
+          <li>Easier to implement in real systems</li>
+        </ul>
+        <!-- DFA Example Diagram -->
+        <div class="intro-diagram">
+          <p class="diagram-label">Equivalent DFA for (a+b)*a</p>
+          <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" class="example-svg" style="display:block; margin:0 auto;">
+            <defs>
+              <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#914F1E"/>
+              </marker>
+            </defs>
+            <!-- Entry arrow -->
+            <line x1="10" y1="90" x2="55" y2="90" stroke="#914F1E" stroke-width="2" marker-end="url(#arr2)"/>
+            <!-- q0 -->
+            <circle cx="85" cy="90" r="30" fill="#F7DCB9" stroke="#914F1E" stroke-width="2"/>
+            <text x="85" y="95" text-anchor="middle" font-family="Courier New" font-size="14" fill="#2C1A0E">q0</text>
+            <!-- q0 self loop b -->
+            <path d="M 70 63 Q 85 22 100 63" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr2)"/>
+            <text x="85" y="33" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">b</text>
+            <!-- q0 to q1 on a -->
+            <line x1="114" y1="87" x2="197" y2="87" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr2)"/>
+            <text x="152" y="79" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">a</text>
+            <!-- q1 double circle final -->
+            <circle cx="225" cy="90" r="30" fill="#DEAC80" stroke="#914F1E" stroke-width="2"/>
+            <circle cx="225" cy="90" r="23" fill="none" stroke="#914F1E" stroke-width="1.5"/>
+            <text x="225" y="95" text-anchor="middle" font-family="Courier New" font-size="14" fill="#2C1A0E">q1</text>
+            <!-- q1 self loop a -->
+            <path d="M 210 63 Q 225 22 240 63" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr2)"/>
+            <text x="225" y="33" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">a</text>
+            <!-- q1 to q0 on b (curved below) -->
+            <path d="M 200 108 Q 155 145 110 108" fill="none" stroke="#914F1E" stroke-width="1.5" marker-end="url(#arr2)"/>
+            <text x="155" y="143" text-anchor="middle" font-family="Courier New" font-size="12" fill="#914F1E">b</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Differences -->
+  <div class="card diff-card">
+    <h3 class="diff-title">⚡ Key Differences</h3>
+    <div class="diff-grid">
+      <div class="diff-point">
+        <span class="diff-icon">🔀</span>
+        <div><strong>Transitions:</strong> NFA can go to multiple states; DFA goes to exactly one state per input.</div>
+      </div>
+      <div class="diff-point">
+        <span class="diff-icon">⚡</span>
+        <div><strong>Determinism:</strong> NFA is nondeterministic (many choices); DFA is deterministic (one choice).</div>
+      </div>
+      <div class="diff-point">
+        <span class="diff-icon">🏗️</span>
+        <div><strong>Design:</strong> NFA is easier to design; DFA is easier to implement in hardware/software.</div>
+      </div>
+      <div class="diff-point">
+        <span class="diff-icon">⚖️</span>
+        <div><strong>Equivalence:</strong> Every NFA has an equivalent DFA that accepts the same language.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row center-btn" style="margin-top:24px;">
+    <button class="btn-primary" onclick="showPhase(1)">
+      Start Converter <span class="btn-arrow">→</span>
+    </button>
+  </div>
+
+</section>
+
+<!-- ======================== PHASE 1: INPUT FORM ======================== -->
+<section class="phase" id="phase1">
+  <div class="phase-label"><span>STEP 01</span> Define Your NFA</div>
+  <div class="card">
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Number of States</label>
+        <input type="number" id="num_states" min="1" max="10" placeholder="e.g. 3" autocomplete="off"/>
+        <span class="hint">States will be named q0, q1, q2...</span>
+      </div>
+
+      <div class="form-group">
+        <label>Input Symbols</label>
+        <input type="text" id="symbols_input" placeholder="e.g. 0 1  or  a b" autocomplete="off"/>
+        <span class="hint">Space separated symbols</span>
+      </div>
+
+      <div class="form-group">
+        <label>Start State</label>
+        <input type="text" id="start_state" placeholder="e.g. q0" autocomplete="off"/>
+        <span class="hint">Must be one of the states</span>
+      </div>
+
+      <div class="form-group">
+        <label>Final States</label>
+        <input type="text" id="final_states" placeholder="e.g. q2  or  q1 q2" autocomplete="off"/>
+        <span class="hint">Space separated final states</span>
+      </div>
+
+    </div>
+    <div id="form-error" class="error-msg" style="display:none;"></div>
+    <button class="btn-primary" onclick="generateNFATable()">
+      Generate NFA Table <span class="btn-arrow">→</span>
+    </button>
+  </div>
+</section>
+
+<!-- ======================== PHASE 2: NFA TABLE ======================== -->
+<section class="phase" id="phase2">
+  <div class="phase-label"><span>STEP 02</span> Fill NFA Transitions</div>
+  <div class="card">
+    <div class="legend-row">
+      <span class="legend-item"><span class="badge start-badge">→</span> Start State</span>
+      <span class="legend-item"><span class="badge final-badge">★</span> Final State</span>
+    </div>
+    <p class="table-hint">
+      Fill each cell with transition states (comma separated, e.g. <code>q0,q1</code>). Use <code>-</code> for no transition.
+    </p>
+    <div class="table-wrapper" id="nfa_table_wrapper"></div>
+    <div id="nfa-error" class="error-msg" style="display:none;"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goBack(1)">← Back</button>
+      <button class="btn-primary" onclick="convertNFA()">
+        Convert to DFA <span class="btn-arrow">→</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PHASE 2.5: CONVERSION STEPS ======================== -->
+<section class="phase" id="phase25">
+  <div class="phase-label"><span>STEP 03</span> Subset Construction — Step by Step</div>
+  <div class="card">
+    <p class="table-hint">
+      This shows exactly how each DFA state was formed from NFA states using the <code>Subset Construction</code> method.
+    </p>
+    <div id="steps_wrapper"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goBack(2)">← Back</button>
+      <button class="btn-primary" onclick="showPhase(3)">
+        View DFA Table <span class="btn-arrow">→</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PHASE 3: DFA TABLE ======================== -->
+<section class="phase" id="phase3">
+  <div class="phase-label"><span>STEP 04</span> DFA Transition Table</div>
+  <div class="card">
+    <div class="legend-row">
+      <span class="legend-item"><span class="badge start-badge">→</span> Start State</span>
+      <span class="legend-item"><span class="badge final-badge">★</span> Final State</span>
+      <span class="legend-item"><span class="badge dead-badge">d</span> Dead State</span>
+    </div>
+    <div class="table-wrapper" id="dfa_table_wrapper"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goBack(25)">← Back</button>
+      <button class="btn-primary" onclick="showGraphs()"> Visualize Graphs <span class="btn-arrow">→</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PHASE 4: GRAPHS ======================== -->
+<section class="phase" id="phase4">
+  <div class="phase-label"><span>STEP 05</span> NFA & DFA Visualization</div>
+
+  <div class="graphs-container">
+
+    <div class="graph-card nfa-card">
+      <div class="graph-header">
+        <span class="graph-tag nfa-tag">NFA</span>
+        <h3>Nondeterministic Finite Automaton</h3>
+      </div>
+      <div class="graph-body" id="nfa_graph">
+        <button class="zoom-btn" onclick="openModal('nfa_graph')">🔍</button>
+      </div>
+    </div>
+
+    <div class="conversion-arrow">
+      <div class="arrow-head">⟹</div>
+    </div>
+
+    <div class="graph-card dfa-card">
+      <div class="graph-header">
+        <span class="graph-tag dfa-tag">DFA</span>
+        <h3>Deterministic Finite Automaton</h3>
+      </div>
+      <div class="graph-body" id="dfa_graph">
+        <button class="zoom-btn" onclick="openModal('dfa_graph')">🔍</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="btn-row center-btn">
+    <button class="btn-secondary" onclick="goBack(3)">← Back</button>
+    <button class="btn-primary" onclick="resetAll()">
+      Start Over ↺
+    </button>
+  </div>
+</section>
+<!-- MODAL -->
+<div id="graph-modal" class="modal-overlay" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-toolbar">
+      <button class="modal-btn" onclick="zoomIn()">＋</button>
+      <button class="modal-btn" onclick="zoomOut()">－</button>
+      <button class="modal-btn" onclick="resetZoom()">⟳</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <p>NFA → DFA Visualizer &nbsp;|&nbsp; Theory of Automata & Formal Languages</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.panzoom.js/1.18.2/svg.panzoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}?v=2"></script>
+</body>
+</html>
