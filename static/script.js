@@ -8,8 +8,8 @@ let appData = {
   final_states: [],
   nfa: {},
   dfa_table: [],
-  nfa_svg: '',
-  dfa_svg: '',
+  nfa_dot: '',
+  dfa_dot: '',
   steps: []
 };
 
@@ -199,8 +199,8 @@ async function convertNFA() {
     }
 
     appData.dfa_table = data.dfa_table;
-    appData.nfa_svg = data.nfa_svg;
-    appData.dfa_svg = data.dfa_svg;
+    appData.nfa_dot = data.nfa_dot;
+    appData.dfa_dot = data.dfa_dot;
     appData.steps = data.steps;
 
     renderSteps(data.steps);
@@ -305,23 +305,32 @@ function renderDFATable(dfaTable, symbols) {
 // Show Graphs
 // ===========================
 function showGraphs() {
-  document.getElementById('nfa_graph').innerHTML = appData.nfa_svg || '<p>No graph available</p>';
-  document.getElementById('dfa_graph').innerHTML = appData.dfa_svg || '<p>No graph available</p>';
+  const viz = new Viz();
 
-  document.querySelectorAll('#nfa_graph svg, #dfa_graph svg').forEach(svg => {
-    svg.removeAttribute('width');
-    svg.removeAttribute('height');
-    svg.style.maxWidth = '100%';
-    svg.style.height = 'auto';
-  });
-
-  // Re-add zoom buttons
-  ['nfa_graph', 'dfa_graph'].forEach(id => {
+  viz.renderSVGElement(appData.nfa_dot).then(svg => {
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    const nfaDiv = document.getElementById('nfa_graph');
+    nfaDiv.innerHTML = '';
+    nfaDiv.appendChild(svg);
     const btn = document.createElement('button');
     btn.className = 'zoom-btn';
     btn.innerHTML = '🔍';
-    btn.onclick = () => openModal(id);
-    document.getElementById(id).appendChild(btn);
+    btn.onclick = () => openModal('nfa_graph');
+    nfaDiv.appendChild(btn);
+  });
+
+  viz.renderSVGElement(appData.dfa_dot).then(svg => {
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    const dfaDiv = document.getElementById('dfa_graph');
+    dfaDiv.innerHTML = '';
+    dfaDiv.appendChild(svg);
+    const btn = document.createElement('button');
+    btn.className = 'zoom-btn';
+    btn.innerHTML = '🔍';
+    btn.onclick = () => openModal('dfa_graph');
+    dfaDiv.appendChild(btn);
   });
 
   showPhase(4);
@@ -331,7 +340,7 @@ function showGraphs() {
 // RESET
 // ===========================
 function resetAll() {
-  appData = { states: [], symbols: [], start_state: '', final_states: [], nfa: {}, dfa_table: [], nfa_svg: '', dfa_svg: '' };
+  appData = { states: [], symbols: [], start_state: '', final_states: [], nfa: {}, dfa_table: [], nfa_dot: '', dfa_dot: '', steps: [] };
   document.getElementById('num_states').value = '';
   document.getElementById('symbols_input').value = '';
   document.getElementById('start_state').value = '';
