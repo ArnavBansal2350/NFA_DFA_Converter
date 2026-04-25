@@ -1,6 +1,6 @@
-import os
 from flask import Flask, render_template, request, jsonify
 from main import nfa_to_dfa, get_dfa_table, generate_nfa_graph, generate_dfa_graph, get_conversion_steps
+import os 
 
 app = Flask(__name__)
 
@@ -52,8 +52,8 @@ def convert():
 
         dfa_table = get_dfa_table(dfa_states, dfa_transitions, dfa_final_states, symbols, start_state)
 
-        nfa_svg = generate_nfa_graph(states, symbols, start_state, final_states, nfa)
-        dfa_svg = generate_dfa_graph(dfa_states, dfa_transitions, dfa_final_states, symbols, start_state)
+        nfa_dot = generate_nfa_graph(states, symbols, start_state, final_states, nfa)
+        dfa_dot = generate_dfa_graph(dfa_states, dfa_transitions, dfa_final_states, symbols, start_state)
 
         steps = get_conversion_steps(states, symbols, start_state, final_states, nfa)
 
@@ -61,14 +61,13 @@ def convert():
             'success': True,
             'dfa_table': dfa_table,
             'symbols': symbols,
-            'nfa_svg': nfa_svg,
-            'dfa_svg': dfa_svg,
+            'nfa_dot': nfa_dot,
+            'dfa_dot': dfa_dot,
             'steps': steps
         })
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
